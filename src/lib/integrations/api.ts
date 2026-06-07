@@ -1,6 +1,6 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 
-export function useApiContextProviderData() {
+export function getApiContextProviderData() {
 	const queryClient = new QueryClient();
 
 	return {
