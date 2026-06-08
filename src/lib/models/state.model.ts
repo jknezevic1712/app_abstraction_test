@@ -1,3 +1,5 @@
+export type StoreProvider = "davstack" | "tanstack";
+
 export interface Character {
 	name: string;
 	hp: number;

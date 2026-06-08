@@ -1,13 +1,28 @@
 import { type AnyFieldApi, useForm } from "@tanstack/react-form";
 import { createFileRoute } from "@tanstack/react-router";
-import { Button } from "#/components/ui/button";
+import { useMemo, useState } from "react";
+import { Button } from "#/components/atoms/button";
+import { RadioGroupChoiceCards } from "#/components/molecules/radio-group-choice-cards";
 import { useStore } from "#/lib/integrations";
-import type { Character } from "#/lib/models";
+import type { Character, RadioGroupChoice, StoreProvider } from "#/lib/models";
 
 export const Route = createFileRoute("/")({ component: Home });
 
+const radioGroupChoices: RadioGroupChoice[] = [
+	{
+		title: "Davstack",
+		value: "davstack" as StoreProvider,
+	},
+	{
+		title: "Tanstack",
+		value: "tanstack" as StoreProvider,
+	},
+];
+
 function Home() {
-	const store = useStore();
+	const [storeProvider, setStoreProvider] = useState<StoreProvider>("tanstack");
+
+	const store = useStore(storeProvider);
 	const form = useForm({
 		defaultValues: {
 			name: "Thazud",
@@ -17,18 +32,30 @@ function Home() {
 		} as Character,
 		onSubmit: ({ value }) => {
 			console.log(value);
+			handleSetPlayerData(value);
 		},
 	});
+	const playerData = useMemo(() => {
+		const data = store.playerData;
+		if (!data) return null;
 
-	const playerData = store.getPlayerData();
+		form.setFieldValue("name", data.name);
+		form.setFieldValue("hp", data.hp);
+		form.setFieldValue("level", data.level);
+		form.setFieldValue("power", data.power);
 
-	function handleSetPlayerData() {
-		store.setPlayerData({
-			name: "Player 1",
-			hp: 500000,
-			level: 90,
-			power: 1500,
-		});
+		return store.playerData;
+	}, [store.playerData, form.setFieldValue]);
+
+	function handleSetPlayerData(data?: Character) {
+		const payload: Character = {
+			name: data?.name ?? "Player 1",
+			hp: data?.hp ?? 500000,
+			level: data?.level ?? 90,
+			power: data?.power ?? 1500,
+		};
+
+		store.setPlayerData(payload);
 	}
 
 	function FieldInfo({ field }: { field: AnyFieldApi }) {
@@ -46,8 +73,18 @@ function Home() {
 		<div className="max-w-xl mx-auto p-8 flex flex-col gap-4 justify-start items-center">
 			<h1 className="text-4xl font-bold mb-14">App abstraction test</h1>
 
+			<div className="flex justify-center items-start gap-4 w-full">
+				<RadioGroupChoiceCards
+					choices={radioGroupChoices}
+					value={storeProvider}
+					onChange={(chosenStoreProvider) => {
+						setStoreProvider(chosenStoreProvider as StoreProvider);
+					}}
+				/>
+			</div>
+
 			<div className="p-4 flex flex-col justify-start items-center gap-4 border rounded-xl">
-				<Button className="w-full" onClick={handleSetPlayerData}>
+				<Button className="w-full" onClick={() => handleSetPlayerData()}>
 					Generate player data
 				</Button>
 

@@ -1,6 +1,7 @@
-import { store } from "@davstack/store";
-import { useCallback } from "react";
-import type { Character, StateModel } from "../models";
+import { store as createDavstackStore } from "@davstack/store";
+import { useSelector as useTanStackStore } from "@tanstack/react-store";
+import { createStore as createTanstackStore } from "@tanstack/store";
+import type { Character, StateModel, StoreProvider } from "../models";
 
 const initialState: StateModel = {
 	gameData: {
@@ -13,7 +14,7 @@ const initialState: StateModel = {
 	},
 };
 
-const appStore = store()
+const davstackStore = createDavstackStore()
 	.state(initialState)
 	.actions((state) => ({
 		getPlayerData: () => state.gameData.player.use(),
@@ -28,44 +29,106 @@ const appStore = store()
 		setRoundsWon: (num: number) => state.gameData.gameState.roundsWon.set(num),
 	}));
 
-export function useStore() {
-	// ! GETTERS
-	const getPlayerData = useCallback(() => {
-		return appStore.getPlayerData();
-	}, []);
-	const getOpponentData = useCallback(() => {
-		return appStore.getOpponentData();
-	}, []);
-	const getRoundLength = useCallback(() => {
-		return appStore.getRoundLength();
-	}, []);
-	const getRoundsWon = useCallback(() => {
-		return appStore.getRoundsWon();
-	}, []);
+export const tanstackStore = createTanstackStore(
+	initialState,
+	({ setState, get }) => ({
+		getPlayerData: () => get().gameData.player,
+		getOpponentData: () => get().gameData.opponent,
+		getRoundLength: () => get().gameData.gameState.roundLength,
+		getRoundsWon: () => get().gameData.gameState.roundsWon,
 
-	// ! SETTERS
-	const setPlayerData = useCallback((data: Character) => {
-		return appStore.setPlayerData(data);
-	}, []);
-	const setOpponentData = useCallback((data: Character) => {
-		return appStore.setOpponentData(data);
-	}, []);
-	const setRoundLength = useCallback((length: number) => {
-		return appStore.setRoundLength(length);
-	}, []);
-	const setRoundsWon = useCallback((num: number) => {
-		return appStore.setRoundsWon(num);
-	}, []);
+		setPlayerData: (data: Character) =>
+			setState((prev) => ({
+				...prev,
+				gameData: {
+					...prev.gameData,
+					player: data,
+				},
+			})),
+		setOpponentData: (data: Character) =>
+			setState((prev) => ({
+				...prev,
+				gameData: {
+					...prev.gameData,
+					opponent: data,
+				},
+			})),
+		setRoundLength: (time: number) =>
+			setState((prev) => ({
+				...prev,
+				gameData: {
+					...prev.gameData,
+					gameState: {
+						...prev.gameData.gameState,
+						roundLength: time,
+					},
+				},
+			})),
+		setRoundsWon: (num: number) =>
+			setState((prev) => ({
+				...prev,
+				gameData: {
+					...prev.gameData,
+					gameState: {
+						...prev.gameData.gameState,
+						roundLength: num,
+					},
+				},
+			})),
+	}),
+);
+
+export function useDavstackStore() {
+	return {
+		playerData: davstackStore.getPlayerData(),
+		opponentData: davstackStore.getOpponentData(),
+		roundLength: davstackStore.getRoundLength(),
+		roundsWon: davstackStore.getRoundsWon(),
+
+		setPlayerData: davstackStore.setPlayerData,
+		setOpponentData: davstackStore.setOpponentData,
+		setRoundLength: davstackStore.setRoundLength,
+		setRoundsWon: davstackStore.setRoundsWon,
+	};
+}
+
+export function useTanstackStore() {
+	const playerData = useTanStackStore(
+		tanstackStore,
+		(state) => state.gameData.player,
+	);
+
+	const opponentData = useTanStackStore(
+		tanstackStore,
+		(state) => state.gameData.opponent,
+	);
+
+	const roundLength = useTanStackStore(
+		tanstackStore,
+		(state) => state.gameData.gameState.roundLength,
+	);
+
+	const roundsWon = useTanStackStore(
+		tanstackStore,
+		(state) => state.gameData.gameState.roundsWon,
+	);
 
 	return {
-		getPlayerData,
-		getOpponentData,
-		getRoundLength,
-		getRoundsWon,
+		playerData,
+		opponentData,
+		roundLength,
+		roundsWon,
 
-		setPlayerData,
-		setOpponentData,
-		setRoundLength,
-		setRoundsWon,
+		setPlayerData: tanstackStore.actions.setPlayerData,
+		setOpponentData: tanstackStore.actions.setOpponentData,
+		setRoundLength: tanstackStore.actions.setRoundLength,
+		setRoundsWon: tanstackStore.actions.setRoundsWon,
 	};
+}
+
+export function useStore(storeProvider: StoreProvider) {
+	const davstack = useDavstackStore();
+	const tanstack = useTanstackStore();
+
+	return storeProvider === "davstack" ? davstack : tanstack;
 }
